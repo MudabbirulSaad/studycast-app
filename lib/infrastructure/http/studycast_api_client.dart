@@ -38,6 +38,48 @@ class StudycastApiClient {
     return ProjectDetail.fromJson(_jsonObject(response));
   }
 
+  Future<Script> saveScript({
+    required String projectId,
+    required String text,
+    ScriptSource source = ScriptSource.pasted,
+  }) async {
+    final response = await _sendJson(
+      'PUT',
+      ['projects', projectId, 'script'],
+      body: {'text': text, 'source': source.toJson()},
+    );
+    return Script.fromJson(_jsonObject(response));
+  }
+
+  Future<Script> uploadScriptFile({
+    required String projectId,
+    required String filename,
+    required List<int> bytes,
+  }) async {
+    final request = http.MultipartRequest(
+      'PUT',
+      _uri(['projects', projectId, 'script']),
+    );
+    request.headers['accept'] = 'application/json';
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: MediaType('text', 'plain'),
+      ),
+    );
+    final response = _checkedResponse(
+      await http.Response.fromStream(await _httpClient.send(request)),
+    );
+    return Script.fromJson(_jsonObject(response));
+  }
+
+  Future<Script> getScript(String projectId) async {
+    final response = await _sendJson('GET', ['projects', projectId, 'script']);
+    return Script.fromJson(_jsonObject(response));
+  }
+
   Future<http.Response> _sendJson(
     String method,
     List<String> pathSegments, {
