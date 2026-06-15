@@ -134,6 +134,35 @@ class StudycastApiClient {
     return QueueSummary.fromJson(_jsonObject(response));
   }
 
+  Future<AudioBytes> downloadProjectFinalAudio(String projectId, {String? range}) {
+    return _sendBytes(['projects', projectId, 'audio', 'final'], range: range);
+  }
+
+  Future<AudioBytes> streamProjectFinalAudio(String projectId, {String? range}) {
+    return _sendBytes(['projects', projectId, 'audio', 'stream'], range: range);
+  }
+
+  Future<AudioBytes> downloadJobFinalAudio(String jobId, {String? range}) {
+    return _sendBytes(['jobs', jobId, 'audio', 'final'], range: range);
+  }
+
+  Future<AudioBytes> streamJobAudio(String jobId, {String? range}) {
+    return _sendBytes(['jobs', jobId, 'audio', 'stream'], range: range);
+  }
+
+  Future<AudioBytes> _sendBytes(List<String> pathSegments, {String? range}) async {
+    final response = await _sendJson(
+      'GET',
+      pathSegments,
+      headers: range == null ? null : {'range': range},
+    );
+    return AudioBytes(
+      bytes: response.bodyBytes,
+      statusCode: response.statusCode,
+      headers: response.headers,
+    );
+  }
+
   Future<http.Response> _sendJson(
     String method,
     List<String> pathSegments, {
