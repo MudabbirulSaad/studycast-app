@@ -150,6 +150,44 @@ class StudycastApiClient {
     return _sendBytes(['jobs', jobId, 'audio', 'stream'], range: range);
   }
 
+  Future<RuntimeSettings> getRuntimeSettings() async {
+    final response = await _sendJson('GET', ['settings']);
+    return RuntimeSettings.fromJson(_jsonObject(response));
+  }
+
+  Future<RuntimeSettings> updateRuntimeSettings(Map<String, Object> values) async {
+    final response = await _sendJson(
+      'PUT',
+      ['settings'],
+      body: {'values': values},
+    );
+    return RuntimeSettings.fromJson(_jsonObject(response));
+  }
+
+  Future<RuntimeStatus> reloadSettings() async {
+    final response = await _sendJson('POST', ['settings', 'reload']);
+    return RuntimeStatus.fromJson(_jsonObject(response));
+  }
+
+  Future<RuntimeStatus> getRuntimeStatus() async {
+    final response = await _sendJson('GET', ['settings', 'runtime-status']);
+    return RuntimeStatus.fromJson(_jsonObject(response));
+  }
+
+  Future<TtsEngineSettings> getTtsEngines() async {
+    final response = await _sendJson('GET', ['settings', 'tts-engines']);
+    return TtsEngineSettings.fromJson(_jsonObject(response));
+  }
+
+  Future<TtsEngineSettings> updateTtsEngine(String engine) async {
+    final response = await _sendJson(
+      'PUT',
+      ['settings', 'tts-engine'],
+      body: {'engine': engine},
+    );
+    return TtsEngineSettings.fromJson(_jsonObject(response));
+  }
+
   Future<AudioBytes> _sendBytes(List<String> pathSegments, {String? range}) async {
     final response = await _sendJson(
       'GET',
