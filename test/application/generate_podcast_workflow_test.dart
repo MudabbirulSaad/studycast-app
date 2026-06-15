@@ -111,7 +111,7 @@ void main() {
     );
 
     expect(result.outcome, GeneratePodcastOutcome.completed);
-    expect(result.finalJob.status, JobStatus.completed);
+    expect(result.finalJob?.status, JobStatus.completed);
     expect(polledStatuses, [JobStatus.running, JobStatus.completed]);
     expect(
       events
@@ -155,7 +155,7 @@ void main() {
         );
 
         expect(result.audioReady, isFalse);
-        expect(result.finalJob.status, status);
+        expect(result.finalJob?.status, status);
         expect(result.failureReason, 'Generation stopped');
         expect(result.outcome, switch (status) {
           JobStatus.failed => GeneratePodcastOutcome.failed,
@@ -184,6 +184,293 @@ void main() {
           projectTitle: '',
           scriptText: 'Host: Hello',
         ),
+      ),
+      throwsA(same(failure)),
+    );
+  });
+
+  test('can be cancelled before creating a project', () async {
+    final cancellationToken = GeneratePodcastCancellationToken()..cancel();
+    final backend = FakeStudycastBackend()
+      ..onCreateProject = ({required title}) async {
+        fail('project should not be created after cancellation');
+      };
+    final events = <GeneratePodcastEventType>[];
+    final workflow = GeneratePodcastWorkflow(
+      projectService: ProjectService(backend),
+      scriptService: ScriptService(backend),
+      jobService: JobService(backend),
+      delay: (_) async {},
+    );
+
+    final result = await workflow.generateFromPastedScript(
+      const GeneratePodcastRequest(
+        projectTitle: 'Biology 101',
+        scriptText: 'Host: Hello',
+      ),
+      cancellationToken: cancellationToken,
+      onEvent: (event) => events.add(event.type),
+    );
+
+    expect(result.project, isNull);
+    expect(result.script, isNull);
+    expect(result.finalJob, isNull);
+    expect(result.outcome, GeneratePodcastOutcome.cancelled);
+    expect(result.audioReady, isFalse);
+    expect(events, [
+      GeneratePodcastEventType.cancellationRequested,
+      GeneratePodcastEventType.cancelled,
+    ]);
+  });
+
+  test('can be cancelled after creating a project', () async {
+    final project = _project();
+    final cancellationToken = GeneratePodcastCancellationToken();
+    final backend = FakeStudycastBackend()
+      ..onCreateProject = ({required title}) async {
+        cancellationToken.cancel();
+        return project;
+      }
+      ..onSaveScript =
+          ({required projectId, required text, required source}) async {
+            fail('script should not be saved after cancellation');
+          }
+      ..onCancelJob = (jobId) async {
+        fail('backend cancel should not be called before job submission');
+      };
+    final workflow = GeneratePodcastWorkflow(
+      projectService: ProjectService(backend),
+      scriptService: ScriptService(backend),
+      jobService: JobService(backend),
+      delay: (_) async {},
+    );
+
+    final result = await workflow.generateFromPastedScript(
+      const GeneratePodcastRequest(
+        projectTitle: 'Biology 101',
+        scriptText: 'Host: Hello',
+      ),
+      cancellationToken: cancellationToken,
+    );
+
+    expect(result.project, same(project));
+    expect(result.script, isNull);
+    expect(result.finalJob, isNull);
+    expect(result.outcome, GeneratePodcastOutcome.cancelled);
+    expect(result.audioReady, isFalse);
+  });
+
+  test('can be cancelled after saving the script', () async {
+    final project = _project();
+    final script = _script();
+    final cancellationToken = GeneratePodcastCancellationToken();
+    final backend = FakeStudycastBackend()
+      ..onCreateProject = ({required title}) async {
+        return project;
+      }
+      ..onSaveScript =
+          ({required projectId, required text, required source}) async {
+            cancellationToken.cancel();
+            return script;
+          }
+      ..onSubmitJob = ({required projectId, options}) async {
+        fail('job should not be submitted after cancellation');
+      }
+      ..onCancelJob = (jobId) async {
+        fail('backend cancel should not be called before job submission');
+      };
+    final workflow = GeneratePodcastWorkflow(
+      projectService: ProjectService(backend),
+      scriptService: ScriptService(backend),
+      jobService: JobService(backend),
+      delay: (_) async {},
+    );
+
+    final result = await workflow.generateFromPastedScript(
+      const GeneratePodcastRequest(
+        projectTitle: 'Biology 101',
+        scriptText: 'Host: Hello',
+      ),
+      cancellationToken: cancellationToken,
+    );
+
+    expect(result.project, same(project));
+    expect(result.script, same(script));
+    expect(result.finalJob, isNull);
+    expect(result.outcome, GeneratePodcastOutcome.cancelled);
+    expect(result.audioReady, isFalse);
+  });
+
+  test('cancels the backend job after submission', () async {
+    final project = _project();
+    final script = _script();
+    final submittedJob = _job(JobStatus.queued);
+    final cancelledJob = _job(JobStatus.cancelled);
+    final cancellationToken = GeneratePodcastCancellationToken();
+    final cancelledJobIds = <String>[];
+    final events = <GeneratePodcastEventType>[];
+    final backend = FakeStudycastBackend()
+      ..onCreateProject = ({required title}) async {
+        return project;
+      }
+      ..onSaveScript =
+          ({required projectId, required text, required source}) async {
+            return script;
+          }
+      ..onSubmitJob = ({required projectId, options}) async {
+        cancellationToken.cancel();
+        return submittedJob;
+      }
+      ..onCancelJob = (jobId) async {
+        cancelledJobIds.add(jobId);
+        return cancelledJob;
+      };
+    final workflow = GeneratePodcastWorkflow(
+      projectService: ProjectService(backend),
+      scriptService: ScriptService(backend),
+      jobService: JobService(backend),
+      delay: (_) async {},
+    );
+
+    final result = await workflow.generateFromPastedScript(
+      const GeneratePodcastRequest(
+        projectTitle: 'Biology 101',
+        scriptText: 'Host: Hello',
+      ),
+      cancellationToken: cancellationToken,
+      onEvent: (event) => events.add(event.type),
+    );
+
+    expect(cancelledJobIds, ['job-1']);
+    expect(result.project, same(project));
+    expect(result.script, same(script));
+    expect(result.finalJob, same(cancelledJob));
+    expect(result.outcome, GeneratePodcastOutcome.cancelled);
+    expect(result.audioReady, isFalse);
+    expect(events, [
+      GeneratePodcastEventType.projectCreated,
+      GeneratePodcastEventType.scriptSaved,
+      GeneratePodcastEventType.jobSubmitted,
+      GeneratePodcastEventType.cancellationRequested,
+      GeneratePodcastEventType.cancelled,
+    ]);
+  });
+
+  test('cancels during polling before the next poll when possible', () async {
+    final cancellationToken = GeneratePodcastCancellationToken();
+    final cancelledJobIds = <String>[];
+    final backend = FakeStudycastBackend()
+      ..onCreateProject = ({required title}) async {
+        return _project();
+      }
+      ..onSaveScript =
+          ({required projectId, required text, required source}) async {
+            return _script();
+          }
+      ..onSubmitJob = ({required projectId, options}) async {
+        return _job(JobStatus.queued);
+      }
+      ..onGetJob = (jobId) async {
+        fail('job should not be polled after cancellation is requested');
+      }
+      ..onCancelJob = (jobId) async {
+        cancelledJobIds.add(jobId);
+        return _job(JobStatus.cancelled);
+      };
+    final workflow = GeneratePodcastWorkflow(
+      projectService: ProjectService(backend),
+      scriptService: ScriptService(backend),
+      jobService: JobService(backend),
+      delay: (_) async {
+        cancellationToken.cancel();
+      },
+    );
+
+    final result = await workflow.generateFromPastedScript(
+      const GeneratePodcastRequest(
+        projectTitle: 'Biology 101',
+        scriptText: 'Host: Hello',
+      ),
+      cancellationToken: cancellationToken,
+    );
+
+    expect(cancelledJobIds, ['job-1']);
+    expect(result.finalJob?.status, JobStatus.cancelled);
+    expect(result.outcome, GeneratePodcastOutcome.cancelled);
+  });
+
+  test('does not cancel when a refreshed job is already terminal', () async {
+    final cancellationToken = GeneratePodcastCancellationToken();
+    final backend = FakeStudycastBackend()
+      ..onCreateProject = ({required title}) async {
+        return _project();
+      }
+      ..onSaveScript =
+          ({required projectId, required text, required source}) async {
+            return _script();
+          }
+      ..onSubmitJob = ({required projectId, options}) async {
+        return _job(JobStatus.queued);
+      }
+      ..onGetJob = (jobId) async {
+        cancellationToken.cancel();
+        return _job(JobStatus.completed, progressPercent: 100);
+      }
+      ..onCancelJob = (jobId) async {
+        fail('terminal refreshed jobs should not be cancelled');
+      };
+    final workflow = GeneratePodcastWorkflow(
+      projectService: ProjectService(backend),
+      scriptService: ScriptService(backend),
+      jobService: JobService(backend),
+      delay: (_) async {},
+    );
+
+    final result = await workflow.generateFromPastedScript(
+      const GeneratePodcastRequest(
+        projectTitle: 'Biology 101',
+        scriptText: 'Host: Hello',
+      ),
+      cancellationToken: cancellationToken,
+    );
+
+    expect(result.finalJob?.status, JobStatus.completed);
+    expect(result.outcome, GeneratePodcastOutcome.completed);
+    expect(result.audioReady, isTrue);
+  });
+
+  test('propagates backend cancel failures', () async {
+    const failure = ApiFailure(message: 'cancel failed');
+    final cancellationToken = GeneratePodcastCancellationToken();
+    final backend = FakeStudycastBackend()
+      ..onCreateProject = ({required title}) async {
+        return _project();
+      }
+      ..onSaveScript =
+          ({required projectId, required text, required source}) async {
+            return _script();
+          }
+      ..onSubmitJob = ({required projectId, options}) async {
+        cancellationToken.cancel();
+        return _job(JobStatus.running);
+      }
+      ..onCancelJob = (jobId) async {
+        throw failure;
+      };
+    final workflow = GeneratePodcastWorkflow(
+      projectService: ProjectService(backend),
+      scriptService: ScriptService(backend),
+      jobService: JobService(backend),
+      delay: (_) async {},
+    );
+
+    await expectLater(
+      workflow.generateFromPastedScript(
+        const GeneratePodcastRequest(
+          projectTitle: 'Biology 101',
+          scriptText: 'Host: Hello',
+        ),
+        cancellationToken: cancellationToken,
       ),
       throwsA(same(failure)),
     );

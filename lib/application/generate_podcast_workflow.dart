@@ -31,8 +31,13 @@ class GeneratePodcastWorkflow {
 
   Future<GeneratePodcastResult> generateFromPastedScript(
     GeneratePodcastRequest request, {
+    GeneratePodcastCancellationToken? cancellationToken,
     GeneratePodcastProgress? onEvent,
   }) async {
+    if (cancellationToken?.isCancellationRequested ?? false) {
+      return _cancelBeforeJob(onEvent: onEvent);
+    }
+
     final project = await _projectService.createProject(request.projectTitle);
     onEvent?.call(
       GeneratePodcastEvent(
@@ -40,6 +45,9 @@ class GeneratePodcastWorkflow {
         project: project,
       ),
     );
+    if (cancellationToken?.isCancellationRequested ?? false) {
+      return _cancelBeforeJob(project: project, onEvent: onEvent);
+    }
 
     final script = await _scriptService.savePastedScript(
       projectId: project.id,
@@ -52,6 +60,13 @@ class GeneratePodcastWorkflow {
         script: script,
       ),
     );
+    if (cancellationToken?.isCancellationRequested ?? false) {
+      return _cancelBeforeJob(
+        project: project,
+        script: script,
+        onEvent: onEvent,
+      );
+    }
 
     final submittedJob = await _jobService.submitJob(
       projectId: project.id,
@@ -66,13 +81,17 @@ class GeneratePodcastWorkflow {
       ),
     );
 
-    final finalJob = await _waitForTerminalJob(
+    final finalJobResult = await _waitForTerminalJob(
       submittedJob,
       project,
       script,
+      cancellationToken,
       onEvent,
     );
-    final outcome = GeneratePodcastOutcome.fromJobStatus(finalJob.status);
+    final finalJob = finalJobResult.job;
+    final outcome = finalJobResult.cancelledByRequest
+        ? GeneratePodcastOutcome.cancelled
+        : GeneratePodcastOutcome.fromJobStatus(finalJob.status);
     onEvent?.call(
       GeneratePodcastEvent(
         type: _eventTypeForOutcome(outcome),
@@ -88,21 +107,32 @@ class GeneratePodcastWorkflow {
       finalJob: finalJob,
       outcome: outcome,
       audioReady: outcome == GeneratePodcastOutcome.completed,
-      failureReason: outcome == GeneratePodcastOutcome.completed
+      failureReason:
+          outcome == GeneratePodcastOutcome.completed ||
+              finalJobResult.cancelledByRequest
           ? null
           : finalJob.failureReason ?? finalJob.message,
     );
   }
 
-  Future<Job> _waitForTerminalJob(
+  Future<_FinalJobResult> _waitForTerminalJob(
     Job submittedJob,
     ProjectSummary project,
     Script script,
+    GeneratePodcastCancellationToken? cancellationToken,
     GeneratePodcastProgress? onEvent,
   ) async {
     var currentJob = submittedJob;
     while (!currentJob.status.isTerminal) {
+      if (cancellationToken?.isCancellationRequested ?? false) {
+        return _cancelBackendJob(currentJob, project, script, onEvent);
+      }
+
       await _delay(_pollInterval);
+      if (cancellationToken?.isCancellationRequested ?? false) {
+        return _cancelBackendJob(currentJob, project, script, onEvent);
+      }
+
       currentJob = await _jobService.getJob(currentJob.id);
       onEvent?.call(
         GeneratePodcastEvent(
@@ -112,8 +142,31 @@ class GeneratePodcastWorkflow {
           job: currentJob,
         ),
       );
+      if (!currentJob.status.isTerminal &&
+          (cancellationToken?.isCancellationRequested ?? false)) {
+        return _cancelBackendJob(currentJob, project, script, onEvent);
+      }
     }
-    return currentJob;
+    return _FinalJobResult(currentJob);
+  }
+
+  Future<_FinalJobResult> _cancelBackendJob(
+    Job job,
+    ProjectSummary project,
+    Script script,
+    GeneratePodcastProgress? onEvent,
+  ) async {
+    onEvent?.call(
+      GeneratePodcastEvent(
+        type: GeneratePodcastEventType.cancellationRequested,
+        project: project,
+        script: script,
+        job: job,
+      ),
+    );
+
+    final cancelledJob = await _jobService.cancelJob(job.id);
+    return _FinalJobResult(cancelledJob, cancelledByRequest: true);
   }
 
   GeneratePodcastEventType _eventTypeForOutcome(
@@ -127,6 +180,43 @@ class GeneratePodcastWorkflow {
         GeneratePodcastEventType.interrupted,
     };
   }
+
+  GeneratePodcastResult _cancelBeforeJob({
+    ProjectSummary? project,
+    Script? script,
+    GeneratePodcastProgress? onEvent,
+  }) {
+    onEvent?.call(
+      GeneratePodcastEvent(
+        type: GeneratePodcastEventType.cancellationRequested,
+        project: project,
+        script: script,
+      ),
+    );
+    onEvent?.call(
+      GeneratePodcastEvent(
+        type: GeneratePodcastEventType.cancelled,
+        project: project,
+        script: script,
+      ),
+    );
+
+    return GeneratePodcastResult(
+      project: project,
+      script: script,
+      finalJob: null,
+      outcome: GeneratePodcastOutcome.cancelled,
+      audioReady: false,
+      failureReason: null,
+    );
+  }
+}
+
+class _FinalJobResult {
+  const _FinalJobResult(this.job, {this.cancelledByRequest = false});
+
+  final Job job;
+  final bool cancelledByRequest;
 }
 
 class GeneratePodcastRequest {
@@ -141,6 +231,16 @@ class GeneratePodcastRequest {
   final StartJobOptions? jobOptions;
 }
 
+class GeneratePodcastCancellationToken {
+  bool get isCancellationRequested => _isCancellationRequested;
+
+  bool _isCancellationRequested = false;
+
+  void cancel() {
+    _isCancellationRequested = true;
+  }
+}
+
 class GeneratePodcastResult {
   const GeneratePodcastResult({
     required this.project,
@@ -151,9 +251,9 @@ class GeneratePodcastResult {
     required this.failureReason,
   });
 
-  final ProjectSummary project;
-  final Script script;
-  final Job finalJob;
+  final ProjectSummary? project;
+  final Script? script;
+  final Job? finalJob;
   final GeneratePodcastOutcome outcome;
   final bool audioReady;
   final String? failureReason;
@@ -191,6 +291,7 @@ class GeneratePodcastEvent {
 }
 
 enum GeneratePodcastEventType {
+  cancellationRequested,
   projectCreated,
   scriptSaved,
   jobSubmitted,
