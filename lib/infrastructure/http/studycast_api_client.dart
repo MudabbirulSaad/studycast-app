@@ -188,6 +188,33 @@ class StudycastApiClient {
     return TtsEngineSettings.fromJson(_jsonObject(response));
   }
 
+  Future<List<VoiceProfile>> listVoices() async {
+    final response = await _sendJson('GET', ['voices']);
+    return _jsonList(response, VoiceProfile.fromJson);
+  }
+
+  Future<VoiceProfile> uploadVoice({
+    required String displayName,
+    required String filename,
+    required List<int> bytes,
+  }) async {
+    final request = http.MultipartRequest('POST', _uri(['voices']));
+    request.headers['accept'] = 'application/json';
+    request.fields['display_name'] = displayName;
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: _audioContentType(filename),
+      ),
+    );
+    final response = _checkedResponse(
+      await http.Response.fromStream(await _httpClient.send(request)),
+    );
+    return VoiceProfile.fromJson(_jsonObject(response));
+  }
+
   Future<AudioBytes> _sendBytes(List<String> pathSegments, {String? range}) async {
     final response = await _sendJson(
       'GET',
@@ -321,4 +348,15 @@ http.MultipartFile bytesMultipartFile({
     filename: filename,
     contentType: contentType,
   );
+}
+
+MediaType _audioContentType(String filename) {
+  final extension = filename.split('.').last.toLowerCase();
+  return switch (extension) {
+    'wav' => MediaType('audio', 'wav'),
+    'mp3' => MediaType('audio', 'mpeg'),
+    'flac' => MediaType('audio', 'flac'),
+    'm4a' => MediaType('audio', 'mp4'),
+    _ => MediaType('application', 'octet-stream'),
+  };
 }
