@@ -80,6 +80,60 @@ class StudycastApiClient {
     return Script.fromJson(_jsonObject(response));
   }
 
+  Future<Job> submitJob({
+    required String projectId,
+    StartJobOptions? options,
+  }) async {
+    final response = await _sendJson(
+      'POST',
+      ['projects', projectId, 'jobs'],
+      body: options?.toJson(),
+    );
+    return Job.fromJson(_jsonObject(response));
+  }
+
+  Future<List<Job>> listJobs({
+    List<JobStatus> statuses = const [],
+    String? projectId,
+    String? query,
+  }) async {
+    final response = await _sendJson(
+      'GET',
+      ['jobs'],
+      queryParameters: _optionalQuery({
+        'status': statuses.map((status) => status.toJson()).join(','),
+        'project_id': projectId,
+        'q': query,
+      }),
+    );
+    return _jsonList(response, Job.fromJson);
+  }
+
+  Future<Job> getJob(String jobId) async {
+    final response = await _sendJson('GET', ['jobs', jobId]);
+    return Job.fromJson(_jsonObject(response));
+  }
+
+  Future<Job> cancelJob(String jobId) async {
+    final response = await _sendJson('POST', ['jobs', jobId, 'cancel']);
+    return Job.fromJson(_jsonObject(response));
+  }
+
+  Future<Job> rerunJob(String jobId) async {
+    final response = await _sendJson('POST', ['jobs', jobId, 'rerun']);
+    return Job.fromJson(_jsonObject(response));
+  }
+
+  Future<Script> getJobScript(String jobId) async {
+    final response = await _sendJson('GET', ['jobs', jobId, 'script']);
+    return Script.fromJson(_jsonObject(response));
+  }
+
+  Future<QueueSummary> getQueueSummary() async {
+    final response = await _sendJson('GET', ['queue']);
+    return QueueSummary.fromJson(_jsonObject(response));
+  }
+
   Future<http.Response> _sendJson(
     String method,
     List<String> pathSegments, {
