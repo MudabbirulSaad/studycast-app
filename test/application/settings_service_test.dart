@@ -6,56 +6,59 @@ import 'package:studycast/domain/api/studycast_models.dart';
 import 'fake_studycast_backend.dart';
 
 void main() {
-  test('manages runtime settings and TTS engine settings through the backend port', () async {
-    final settings = _settings();
-    final status = _status();
-    final engines = _engines();
-    final calls = <String>[];
-    final backend = FakeStudycastBackend()
-      ..onGetRuntimeSettings = () async {
-        calls.add('get-settings');
-        return settings;
-      }
-      ..onUpdateRuntimeSettings = (values) async {
-        calls.add('update-settings:${values['max_chunk_chars']}');
-        return settings;
-      }
-      ..onReloadSettings = () async {
-        calls.add('reload');
-        return status;
-      }
-      ..onGetRuntimeStatus = () async {
-        calls.add('status');
-        return status;
-      }
-      ..onGetTtsEngines = () async {
-        calls.add('engines');
-        return engines;
-      }
-      ..onUpdateTtsEngine = (engine) async {
-        calls.add('update-engine:$engine');
-        return engines;
-      };
-    final service = SettingsService(backend);
+  test(
+    'manages runtime settings and TTS engine settings through the backend port',
+    () async {
+      final settings = _settings();
+      final status = _status();
+      final engines = _engines();
+      final calls = <String>[];
+      final backend = FakeStudycastBackend()
+        ..onGetRuntimeSettings = () async {
+          calls.add('get-settings');
+          return settings;
+        }
+        ..onUpdateRuntimeSettings = (values) async {
+          calls.add('update-settings:${values['max_chunk_chars']}');
+          return settings;
+        }
+        ..onReloadSettings = () async {
+          calls.add('reload');
+          return status;
+        }
+        ..onGetRuntimeStatus = () async {
+          calls.add('status');
+          return status;
+        }
+        ..onGetTtsEngines = () async {
+          calls.add('engines');
+          return engines;
+        }
+        ..onUpdateTtsEngine = (engine) async {
+          calls.add('update-engine:$engine');
+          return engines;
+        };
+      final service = SettingsService(backend);
 
-    expect(await service.getRuntimeSettings(), same(settings));
-    expect(
-      await service.updateRuntimeSettings({'max_chunk_chars': 320}),
-      same(settings),
-    );
-    expect(await service.reloadSettings(), same(status));
-    expect(await service.getRuntimeStatus(), same(status));
-    expect(await service.getTtsEngines(), same(engines));
-    expect(await service.updateTtsEngine('fake'), same(engines));
-    expect(calls, [
-      'get-settings',
-      'update-settings:320',
-      'reload',
-      'status',
-      'engines',
-      'update-engine:fake',
-    ]);
-  });
+      expect(await service.getRuntimeSettings(), same(settings));
+      expect(
+        await service.updateRuntimeSettings({'max_chunk_chars': 320}),
+        same(settings),
+      );
+      expect(await service.reloadSettings(), same(status));
+      expect(await service.getRuntimeStatus(), same(status));
+      expect(await service.getTtsEngines(), same(engines));
+      expect(await service.updateTtsEngine('fake'), same(engines));
+      expect(calls, [
+        'get-settings',
+        'update-settings:320',
+        'reload',
+        'status',
+        'engines',
+        'update-engine:fake',
+      ]);
+    },
+  );
 
   test('lets backend failures propagate', () async {
     const failure = ApiFailure(message: 'active jobs block reload');

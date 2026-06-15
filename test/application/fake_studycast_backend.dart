@@ -9,12 +9,14 @@ class FakeStudycastBackend implements StudycastBackend {
     required String projectId,
     required String text,
     required ScriptSource source,
-  })? onSaveScript;
+  })?
+  onSaveScript;
   Future<Script> Function({
     required String projectId,
     required String filename,
     required List<int> bytes,
-  })? onUploadScriptFile;
+  })?
+  onUploadScriptFile;
   Future<Script> Function(String projectId)? onGetScript;
   Future<Job> Function({required String projectId, StartJobOptions? options})?
   onSubmitJob;
@@ -22,7 +24,8 @@ class FakeStudycastBackend implements StudycastBackend {
     List<JobStatus> statuses,
     String? projectId,
     String? query,
-  })? onListJobs;
+  })?
+  onListJobs;
   Future<Job> Function(String jobId)? onGetJob;
   Future<Job> Function(String jobId)? onCancelJob;
   Future<Job> Function(String jobId)? onRerunJob;
@@ -47,7 +50,8 @@ class FakeStudycastBackend implements StudycastBackend {
     required String displayName,
     required String filename,
     required List<int> bytes,
-  })? onUploadVoice;
+  })?
+  onUploadVoice;
 
   @override
   Future<ProjectSummary> createProject({required String title}) {
@@ -70,7 +74,11 @@ class FakeStudycastBackend implements StudycastBackend {
     required String text,
     ScriptSource source = ScriptSource.pasted,
   }) {
-    return onSaveScript?.call(projectId: projectId, text: text, source: source) ??
+    return onSaveScript?.call(
+          projectId: projectId,
+          text: text,
+          source: source,
+        ) ??
         _missing('saveScript');
   }
 
@@ -148,7 +156,10 @@ class FakeStudycastBackend implements StudycastBackend {
   }
 
   @override
-  Future<AudioBytes> streamProjectFinalAudio(String projectId, {String? range}) {
+  Future<AudioBytes> streamProjectFinalAudio(
+    String projectId, {
+    String? range,
+  }) {
     return onStreamProjectFinalAudio?.call(projectId, range: range) ??
         _missing('streamProjectFinalAudio');
   }

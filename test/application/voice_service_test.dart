@@ -15,10 +15,11 @@ void main() {
         calls.add('list');
         return [defaultVoice];
       }
-      ..onUploadVoice = ({required displayName, required filename, required bytes}) async {
-        calls.add('upload:$displayName:$filename:${bytes.join(',')}');
-        return uploadedVoice;
-      };
+      ..onUploadVoice =
+          ({required displayName, required filename, required bytes}) async {
+            calls.add('upload:$displayName:$filename:${bytes.join(',')}');
+            return uploadedVoice;
+          };
     final service = VoiceService(backend);
 
     expect(await service.listVoices(), [same(defaultVoice)]);
@@ -36,9 +37,10 @@ void main() {
   test('lets backend failures propagate', () async {
     const failure = ApiFailure(message: 'unsupported extension');
     final backend = FakeStudycastBackend()
-      ..onUploadVoice = ({required displayName, required filename, required bytes}) async {
-        throw failure;
-      };
+      ..onUploadVoice =
+          ({required displayName, required filename, required bytes}) async {
+            throw failure;
+          };
     final service = VoiceService(backend);
 
     await expectLater(

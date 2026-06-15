@@ -6,10 +6,7 @@ class JobService {
 
   final StudycastBackend _backend;
 
-  Future<Job> submitJob({
-    required String projectId,
-    StartJobOptions? options,
-  }) {
+  Future<Job> submitJob({required String projectId, StartJobOptions? options}) {
     return _backend.submitJob(projectId: projectId, options: options);
   }
 
