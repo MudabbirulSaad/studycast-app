@@ -105,7 +105,8 @@ http.StreamedResponse _jsonResponse(Object body, {int statusCode = 200}) {
 class _CapturingClient extends http.BaseClient {
   _CapturingClient(this._handler);
 
-  final Future<http.StreamedResponse> Function(http.BaseRequest request) _handler;
+  final Future<http.StreamedResponse> Function(http.BaseRequest request)
+  _handler;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {

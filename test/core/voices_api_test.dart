@@ -32,7 +32,10 @@ void main() {
         expect(multipart.fields['display_name'], 'Teacher Voice');
         expect(multipart.files.single.field, 'file');
         expect(multipart.files.single.filename, 'teacher.wav');
-        return _jsonResponse(_voiceJson(id: 'voice-1', hasSample: true), statusCode: 201);
+        return _jsonResponse(
+          _voiceJson(id: 'voice-1', hasSample: true),
+          statusCode: 201,
+        );
       }),
     );
 
@@ -47,7 +50,10 @@ void main() {
   });
 }
 
-Map<String, Object?> _voiceJson({String id = 'default', bool hasSample = false}) {
+Map<String, Object?> _voiceJson({
+  String id = 'default',
+  bool hasSample = false,
+}) {
   return {
     'id': id,
     'display_name': id == 'default' ? 'Default' : 'Teacher Voice',
@@ -70,7 +76,8 @@ http.StreamedResponse _jsonResponse(Object body, {int statusCode = 200}) {
 class _CapturingClient extends http.BaseClient {
   _CapturingClient(this._handler);
 
-  final Future<http.StreamedResponse> Function(http.BaseRequest request) _handler;
+  final Future<http.StreamedResponse> Function(http.BaseRequest request)
+  _handler;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {

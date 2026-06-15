@@ -3,18 +3,18 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:studycast/domain/api/api_failure.dart';
+import 'package:studycast/domain/api/studycast_backend.dart';
 import 'package:studycast/domain/api/studycast_models.dart';
 
-class StudycastApiClient {
-  StudycastApiClient({
-    required Uri baseUrl,
-    http.Client? httpClient,
-  })  : _baseUrl = _normalizeBaseUrl(baseUrl),
-        _httpClient = httpClient ?? http.Client();
+class StudycastApiClient implements StudycastBackend {
+  StudycastApiClient({required Uri baseUrl, http.Client? httpClient})
+    : _baseUrl = _normalizeBaseUrl(baseUrl),
+      _httpClient = httpClient ?? http.Client();
 
   final Uri _baseUrl;
   final http.Client _httpClient;
 
+  @override
   Future<ProjectSummary> createProject({required String title}) async {
     final response = await _sendJson(
       'POST',
@@ -24,20 +24,21 @@ class StudycastApiClient {
     return ProjectSummary.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<List<ProjectSummary>> listProjects({String? query}) async {
-    final response = await _sendJson(
-      'GET',
-      ['projects'],
-      queryParameters: _optionalQuery({'q': query}),
-    );
+    final response = await _sendJson('GET', [
+      'projects',
+    ], queryParameters: _optionalQuery({'q': query}));
     return _jsonList(response, ProjectSummary.fromJson);
   }
 
+  @override
   Future<ProjectDetail> getProject(String projectId) async {
     final response = await _sendJson('GET', ['projects', projectId]);
     return ProjectDetail.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<Script> saveScript({
     required String projectId,
     required String text,
@@ -51,6 +52,7 @@ class StudycastApiClient {
     return Script.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<Script> uploadScriptFile({
     required String projectId,
     required String filename,
@@ -75,23 +77,26 @@ class StudycastApiClient {
     return Script.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<Script> getScript(String projectId) async {
     final response = await _sendJson('GET', ['projects', projectId, 'script']);
     return Script.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<Job> submitJob({
     required String projectId,
     StartJobOptions? options,
   }) async {
-    final response = await _sendJson(
-      'POST',
-      ['projects', projectId, 'jobs'],
-      body: options?.toJson(),
-    );
+    final response = await _sendJson('POST', [
+      'projects',
+      projectId,
+      'jobs',
+    ], body: options?.toJson());
     return Job.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<List<Job>> listJobs({
     List<JobStatus> statuses = const [],
     String? projectId,
@@ -109,53 +114,72 @@ class StudycastApiClient {
     return _jsonList(response, Job.fromJson);
   }
 
+  @override
   Future<Job> getJob(String jobId) async {
     final response = await _sendJson('GET', ['jobs', jobId]);
     return Job.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<Job> cancelJob(String jobId) async {
     final response = await _sendJson('POST', ['jobs', jobId, 'cancel']);
     return Job.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<Job> rerunJob(String jobId) async {
     final response = await _sendJson('POST', ['jobs', jobId, 'rerun']);
     return Job.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<Script> getJobScript(String jobId) async {
     final response = await _sendJson('GET', ['jobs', jobId, 'script']);
     return Script.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<QueueSummary> getQueueSummary() async {
     final response = await _sendJson('GET', ['queue']);
     return QueueSummary.fromJson(_jsonObject(response));
   }
 
-  Future<AudioBytes> downloadProjectFinalAudio(String projectId, {String? range}) {
+  @override
+  Future<AudioBytes> downloadProjectFinalAudio(
+    String projectId, {
+    String? range,
+  }) {
     return _sendBytes(['projects', projectId, 'audio', 'final'], range: range);
   }
 
-  Future<AudioBytes> streamProjectFinalAudio(String projectId, {String? range}) {
+  @override
+  Future<AudioBytes> streamProjectFinalAudio(
+    String projectId, {
+    String? range,
+  }) {
     return _sendBytes(['projects', projectId, 'audio', 'stream'], range: range);
   }
 
+  @override
   Future<AudioBytes> downloadJobFinalAudio(String jobId, {String? range}) {
     return _sendBytes(['jobs', jobId, 'audio', 'final'], range: range);
   }
 
+  @override
   Future<AudioBytes> streamJobAudio(String jobId, {String? range}) {
     return _sendBytes(['jobs', jobId, 'audio', 'stream'], range: range);
   }
 
+  @override
   Future<RuntimeSettings> getRuntimeSettings() async {
     final response = await _sendJson('GET', ['settings']);
     return RuntimeSettings.fromJson(_jsonObject(response));
   }
 
-  Future<RuntimeSettings> updateRuntimeSettings(Map<String, Object> values) async {
+  @override
+  Future<RuntimeSettings> updateRuntimeSettings(
+    Map<String, Object> values,
+  ) async {
     final response = await _sendJson(
       'PUT',
       ['settings'],
@@ -164,21 +188,25 @@ class StudycastApiClient {
     return RuntimeSettings.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<RuntimeStatus> reloadSettings() async {
     final response = await _sendJson('POST', ['settings', 'reload']);
     return RuntimeStatus.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<RuntimeStatus> getRuntimeStatus() async {
     final response = await _sendJson('GET', ['settings', 'runtime-status']);
     return RuntimeStatus.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<TtsEngineSettings> getTtsEngines() async {
     final response = await _sendJson('GET', ['settings', 'tts-engines']);
     return TtsEngineSettings.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<TtsEngineSettings> updateTtsEngine(String engine) async {
     final response = await _sendJson(
       'PUT',
@@ -188,11 +216,13 @@ class StudycastApiClient {
     return TtsEngineSettings.fromJson(_jsonObject(response));
   }
 
+  @override
   Future<List<VoiceProfile>> listVoices() async {
     final response = await _sendJson('GET', ['voices']);
     return _jsonList(response, VoiceProfile.fromJson);
   }
 
+  @override
   Future<VoiceProfile> uploadVoice({
     required String displayName,
     required String filename,
@@ -215,7 +245,10 @@ class StudycastApiClient {
     return VoiceProfile.fromJson(_jsonObject(response));
   }
 
-  Future<AudioBytes> _sendBytes(List<String> pathSegments, {String? range}) async {
+  Future<AudioBytes> _sendBytes(
+    List<String> pathSegments, {
+    String? range,
+  }) async {
     final response = await _sendJson(
       'GET',
       pathSegments,
@@ -244,7 +277,9 @@ class StudycastApiClient {
     if (body != null) {
       request.body = jsonEncode(body);
     }
-    return _checkedResponse(await http.Response.fromStream(await _httpClient.send(request)));
+    return _checkedResponse(
+      await http.Response.fromStream(await _httpClient.send(request)),
+    );
   }
 
   http.Response _checkedResponse(http.Response response) {
@@ -259,7 +294,9 @@ class StudycastApiClient {
     if (!contentType.contains('application/json')) {
       return ApiFailure(
         statusCode: response.statusCode,
-        message: response.body.isEmpty ? 'HTTP ${response.statusCode}' : response.body,
+        message: response.body.isEmpty
+            ? 'HTTP ${response.statusCode}'
+            : response.body,
       );
     }
 
@@ -272,7 +309,10 @@ class StudycastApiClient {
           code: 'validation_error',
           message: 'Request validation failed.',
           validationErrors: validationDetails
-              .map((item) => ValidationIssue.fromJson(item as Map<String, Object?>))
+              .map(
+                (item) =>
+                    ValidationIssue.fromJson(item as Map<String, Object?>),
+              )
               .toList(growable: false),
         );
       }
@@ -313,10 +353,14 @@ class StudycastApiClient {
   }
 
   Uri _uri(List<String> pathSegments, [Map<String, String>? queryParameters]) {
-    final baseSegments = _baseUrl.pathSegments.where((segment) => segment.isNotEmpty);
+    final baseSegments = _baseUrl.pathSegments.where(
+      (segment) => segment.isNotEmpty,
+    );
     return _baseUrl.replace(
       pathSegments: [...baseSegments, 'api', 'v1', ...pathSegments],
-      queryParameters: queryParameters?.isEmpty ?? true ? null : queryParameters,
+      queryParameters: queryParameters?.isEmpty ?? true
+          ? null
+          : queryParameters,
     );
   }
 
@@ -332,7 +376,8 @@ class StudycastApiClient {
 Map<String, String> _optionalQuery(Map<String, String?> values) {
   return {
     for (final entry in values.entries)
-      if (entry.value != null && entry.value!.isNotEmpty) entry.key: entry.value!,
+      if (entry.value != null && entry.value!.isNotEmpty)
+        entry.key: entry.value!,
   };
 }
 

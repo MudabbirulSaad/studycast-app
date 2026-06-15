@@ -14,7 +14,10 @@ void main() {
       httpClient: MockClient((request) async {
         requests.add(request);
         expect(request.method, 'POST');
-        expect(request.url.toString(), 'http://example.test/root/api/v1/projects');
+        expect(
+          request.url.toString(),
+          'http://example.test/root/api/v1/projects',
+        );
         expect(jsonDecode(request.body), {'title': 'Biology 101'});
         return http.Response(
           jsonEncode({
@@ -41,7 +44,10 @@ void main() {
       baseUrl: Uri.parse('http://example.test'),
       httpClient: MockClient((request) async {
         expect(request.method, 'GET');
-        expect(request.url.toString(), 'http://example.test/api/v1/projects?q=bio');
+        expect(
+          request.url.toString(),
+          'http://example.test/api/v1/projects?q=bio',
+        );
         return http.Response(
           jsonEncode([
             {
@@ -114,7 +120,11 @@ void main() {
         isA<ApiFailure>()
             .having((failure) => failure.statusCode, 'statusCode', 400)
             .having((failure) => failure.code, 'code', 'domain_error')
-            .having((failure) => failure.message, 'message', 'empty project title'),
+            .having(
+              (failure) => failure.message,
+              'message',
+              'empty project title',
+            ),
       ),
     );
   });

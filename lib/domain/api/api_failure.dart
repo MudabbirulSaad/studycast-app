@@ -17,7 +17,9 @@ class ApiFailure implements Exception {
 
   @override
   String toString() {
-    final prefix = statusCode == null ? 'ApiFailure' : 'ApiFailure($statusCode)';
+    final prefix = statusCode == null
+        ? 'ApiFailure'
+        : 'ApiFailure($statusCode)';
     return '$prefix: $message';
   }
 }

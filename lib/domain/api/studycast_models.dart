@@ -97,11 +97,7 @@ class ProjectDetail extends ProjectSummary {
 }
 
 class Chunk {
-  const Chunk({
-    required this.index,
-    required this.speaker,
-    required this.text,
-  });
+  const Chunk({required this.index, required this.speaker, required this.text});
 
   final int index;
   final String speaker;
@@ -155,10 +151,7 @@ class StartJobOptions {
   final Map<String, num> ttsParams;
 
   Map<String, Object?> toJson() {
-    return {
-      'voice_profile_id': voiceProfileId,
-      'tts_params': ttsParams,
-    };
+    return {'voice_profile_id': voiceProfileId, 'tts_params': ttsParams};
   }
 }
 
@@ -256,7 +249,8 @@ class JobSnapshot {
       speakers: (json['speakers'] as List<Object?>).cast<String>(),
       chunks: _list(json['chunks'], Chunk.fromJson),
       voiceProfileId: json['voice_profile_id'] as String,
-      ttsParams: (json['tts_params'] as Map<String, Object?>).cast<String, num>(),
+      ttsParams: (json['tts_params'] as Map<String, Object?>)
+          .cast<String, num>(),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -287,8 +281,9 @@ class QueueSummary {
       maxActiveJobsTotal: json['max_active_jobs_total'] as int,
       concurrencyLimits: (json['concurrency_limits'] as Map<String, Object?>)
           .map((key, value) => MapEntry(key, value as int)),
-      queuePositions: (json['queue_positions'] as Map<String, Object?>)
-          .map((key, value) => MapEntry(key, value as int)),
+      queuePositions: (json['queue_positions'] as Map<String, Object?>).map(
+        (key, value) => MapEntry(key, value as int),
+      ),
     );
   }
 }
@@ -324,9 +319,12 @@ class RuntimeSettings {
 
   factory RuntimeSettings.fromJson(Map<String, Object?> json) {
     return RuntimeSettings(
-      values: RuntimeSettingsValues.fromJson(json['values'] as Map<String, Object?>),
+      values: RuntimeSettingsValues.fromJson(
+        json['values'] as Map<String, Object?>,
+      ),
       editableFields: (json['editable_fields'] as List<Object?>).cast<String>(),
-      availableEngines: (json['available_engines'] as List<Object?>).cast<String>(),
+      availableEngines: (json['available_engines'] as List<Object?>)
+          .cast<String>(),
       reloadRequired: json['reload_required'] as bool,
       runtimeStatus: json['runtime_status'] as String,
       lastReloadError: json['last_reload_error'] as String?,
@@ -368,8 +366,10 @@ class RuntimeSettingsValues {
       maxScriptSizeBytes: json['max_script_size_bytes'] as int,
       maxChunkChars: json['max_chunk_chars'] as int,
       maxChunks: json['max_chunks'] as int,
-      chatterboxMaxConcurrentJobs: json['chatterbox_max_concurrent_jobs'] as int,
-      audioMergeMaxConcurrentJobs: json['audio_merge_max_concurrent_jobs'] as int,
+      chatterboxMaxConcurrentJobs:
+          json['chatterbox_max_concurrent_jobs'] as int,
+      audioMergeMaxConcurrentJobs:
+          json['audio_merge_max_concurrent_jobs'] as int,
       maxActiveJobsTotal: json['max_active_jobs_total'] as int,
       storageRoot: json['storage_root'] as String,
       frontendOrigin: json['frontend_origin'] as String,
@@ -413,7 +413,8 @@ class TtsEngineSettings {
   factory TtsEngineSettings.fromJson(Map<String, Object?> json) {
     return TtsEngineSettings(
       activeEngine: json['active_engine'] as String,
-      availableEngines: (json['available_engines'] as List<Object?>).cast<String>(),
+      availableEngines: (json['available_engines'] as List<Object?>)
+          .cast<String>(),
     );
   }
 }
@@ -461,10 +462,7 @@ T? _objectOrNull<T>(
   return value == null ? null : parse(value as Map<String, Object?>);
 }
 
-List<T> _list<T>(
-  Object? value,
-  T Function(Map<String, Object?> json) parse,
-) {
+List<T> _list<T>(Object? value, T Function(Map<String, Object?> json) parse) {
   return (value as List<Object?>)
       .map((item) => parse(item as Map<String, Object?>))
       .toList(growable: false);

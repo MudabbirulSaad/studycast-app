@@ -12,7 +12,10 @@ void main() {
       baseUrl: Uri.parse('http://example.test'),
       httpClient: MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.toString(), 'http://example.test/api/v1/projects/project-1/jobs');
+        expect(
+          request.url.toString(),
+          'http://example.test/api/v1/projects/project-1/jobs',
+        );
         expect(jsonDecode(request.body), {
           'voice_profile_id': 'voice-1',
           'tts_params': {'temperature': 0.4},

@@ -76,7 +76,11 @@ void main() {
       throwsA(
         isA<ApiFailure>()
             .having((failure) => failure.statusCode, 'statusCode', 400)
-            .having((failure) => failure.message, 'message', 'Malformed Range header'),
+            .having(
+              (failure) => failure.message,
+              'message',
+              'Malformed Range header',
+            ),
       ),
     );
   });

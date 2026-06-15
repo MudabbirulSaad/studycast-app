@@ -27,7 +27,10 @@ void main() {
 
     await service.saveBaseUrl('  http://192.168.1.42:8000/  ');
 
-    expect(await service.resolveBaseUrl(), Uri.parse('http://192.168.1.42:8000'));
+    expect(
+      await service.resolveBaseUrl(),
+      Uri.parse('http://192.168.1.42:8000'),
+    );
   });
 
   test('rejects blank or relative backend URLs', () async {
@@ -37,6 +40,9 @@ void main() {
     final service = ApiEndpointSettingsService(repository);
 
     expect(() => service.saveBaseUrl(''), throwsA(isA<FormatException>()));
-    expect(() => service.saveBaseUrl('/api/v1'), throwsA(isA<FormatException>()));
+    expect(
+      () => service.saveBaseUrl('/api/v1'),
+      throwsA(isA<FormatException>()),
+    );
   });
 }

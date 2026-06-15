@@ -54,7 +54,10 @@ void main() {
       baseUrl: Uri.parse('http://example.test'),
       httpClient: MockClient((request) async {
         seen.add('${request.method} ${request.url.path}');
-        return _jsonResponse(_runtimeStatusJson(), statusCode: request.method == 'POST' ? 202 : 200);
+        return _jsonResponse(
+          _runtimeStatusJson(),
+          statusCode: request.method == 'POST' ? 202 : 200,
+        );
       }),
     );
 

@@ -1,10 +1,8 @@
 import 'package:studycast/domain/settings/api_endpoint_settings_repository.dart';
 
 class ApiEndpointSettingsService {
-  ApiEndpointSettingsService(
-    this._repository, {
-    Uri? defaultBaseUrl,
-  }) : _defaultBaseUrl = defaultBaseUrl ?? _environmentDefaultBaseUrl;
+  ApiEndpointSettingsService(this._repository, {Uri? defaultBaseUrl})
+    : _defaultBaseUrl = defaultBaseUrl ?? _environmentDefaultBaseUrl;
 
   static final Uri _environmentDefaultBaseUrl = Uri.parse(
     const String.fromEnvironment(
@@ -23,7 +21,10 @@ class ApiEndpointSettingsService {
   Future<void> saveBaseUrl(String value) async {
     final parsed = Uri.tryParse(value.trim());
     if (parsed == null || !parsed.hasScheme || parsed.host.isEmpty) {
-      throw FormatException('Backend URL must be an absolute HTTP(S) URL.', value);
+      throw FormatException(
+        'Backend URL must be an absolute HTTP(S) URL.',
+        value,
+      );
     }
     if (parsed.scheme != 'http' && parsed.scheme != 'https') {
       throw FormatException('Backend URL must use HTTP or HTTPS.', value);
